@@ -5,6 +5,14 @@ from sklearn.metrics import mean_squared_error
 from sklearn.metrics import mean_absolute_error
 
 '''
+    Variables that affect the below functions. Set accordingly!
+'''
+#   Variables for use in the program.
+kfold = 5       # Determines how many different folds occur. (High effect on performance!!!)
+neighbors = 10  # Determines how many neighbors will be considered. (Low effect on performance.)
+
+
+'''
     standardize()
         Helper function to standardize/normalize an array of data.
         Input an array.
@@ -18,18 +26,18 @@ def standardize(inputArr):
     return (inputArr - mean) / std
 
 '''
-    fivefold()
-        Helper function to divide an array into 5 equally sized parts.
+    kfold()
+        Helper function to divide an array into k equally sized parts.
         Input an array.
-        Returns an array of 5 arrays, splitting the original array.
+        Returns an array of k arrays, splitting the original array.
         (Useful for five-fold validation, a replacement to random validation sets.)
 '''
-#   Helper function to divide an array into 5 equal parts
-def fivefold(inputArr):
+#   Helper function to divide an array into k equal parts
+def kfold(inputArr, k):
     height = inputArr.shape[0]
     folds = []
-    for i in range(5):
-        folds.append(inputArr[(int) (height/5 * i) : (int) (height/5 * (i + 1))])
+    for i in range(k):
+        folds.append(inputArr[(int) (height/k * i) : (int) (height/k * (i + 1))])
     return folds
 
 '''
@@ -80,18 +88,18 @@ print("Printing images...")
 plotimg(train_images, train_points, (0, 5))
 
 print("Dividing data...")
-train_points_folds = fivefold(train_points)
-train_image_folds = fivefold(train_images)
+train_points_folds = kfold(train_points)
+train_image_folds = kfold(train_images)
 
-print("Started training (5-fold validation).")
+print("Started training (k-fold validation).")
 train_predictions = []
-for iter in range(5):
-    print(f"Starting fold {iter + 1}/5...")
+for iter in range(kfold):
+    print(f"Starting fold {iter + 1}/{kfold}...")
     train_trainfolds_points = []
     train_trainfolds_images = []
     train_validfolds_points = []
     train_validfolds_images = []
-    for i in range(5):
+    for i in range(kfold):
         if (iter != i):
             train_trainfolds_images.append(train_image_folds[i])
             train_trainfolds_points.append(train_points_folds[i])
@@ -110,7 +118,7 @@ for iter in range(5):
         distances = np.sum((train_trainfolds_images - v) ** 2, axis = 1)
         sortedindices = np.argsort(distances)
         nearestpoints = []
-        for i in range(10):
+        for i in range(neighbors):
             nearestpoints.append(train_trainfolds_points[sortedindices[i]])
         nearestpoints = np.array(nearestpoints)
         avgpoints = nearestpoints.mean(axis = 0)
@@ -121,7 +129,7 @@ print("Training finished!")
 train_predictions = np.array(train_predictions)
 
 print("Metrics:")
-print(f"train_points.shape: {train_points.shape}")
-print(f"train_predictions.shape: {train_predictions.shape}")
+#print(f"train_points.shape: {train_points.shape}")
+#print(f"train_predictions.shape: {train_predictions.shape}")
 print(f"MSE: {mean_squared_error(train_points, train_predictions)}")
 print(f"MAE: {mean_absolute_error(train_points, train_predictions)}")
