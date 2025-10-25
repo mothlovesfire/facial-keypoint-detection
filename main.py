@@ -8,7 +8,7 @@ from sklearn.metrics import mean_absolute_error
     Variables that affect the below functions. Set accordingly!
 '''
 #   Variables for use in the program.
-kfold = 5       # Determines how many different folds occur. (High effect on performance!!!)
+folds = 5       # Determines how many different folds occur. (High effect on performance!!!)
 neighbors = 10  # Determines how many neighbors will be considered. (Low effect on performance.)
 
 
@@ -33,12 +33,12 @@ def standardize(inputArr):
         (Useful for five-fold validation, a replacement to random validation sets.)
 '''
 #   Helper function to divide an array into k equal parts
-def kfold(inputArr, k):
+def kfold(inputArr):
     height = inputArr.shape[0]
-    folds = []
-    for i in range(k):
-        folds.append(inputArr[(int) (height/k * i) : (int) (height/k * (i + 1))])
-    return folds
+    returnArr = []
+    for i in range(folds):
+        returnArr.append(inputArr[(int) (height/folds * i) : (int) (height/folds * (i + 1))])
+    return returnArr
 
 '''
     plotimg()
@@ -93,13 +93,13 @@ train_image_folds = kfold(train_images)
 
 print("Started training (k-fold validation).")
 train_predictions = []
-for iter in range(kfold):
-    print(f"Starting fold {iter + 1}/{kfold}...")
+for iter in range(folds):
+    print(f"Starting fold {iter + 1}/{folds}...")
     train_trainfolds_points = []
     train_trainfolds_images = []
     train_validfolds_points = []
     train_validfolds_images = []
-    for i in range(kfold):
+    for i in range(folds):
         if (iter != i):
             train_trainfolds_images.append(train_image_folds[i])
             train_trainfolds_points.append(train_points_folds[i])
