@@ -27,13 +27,17 @@ STEPS TO IMPLEMENT & IMPROVE CNN
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import random as rand
+import tensorflow as tf
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+# you need Python 3.12 for this. if you want to run this beautiful program & need help installing that, ping me (i'm brian)
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 "EarlyStopping Prevents Overfitting CNNs. Stopping when validation loss stops improving helps maintain performance."
 "No necessary but useful."
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
 folds = 5
 input_size = 96
@@ -58,7 +62,10 @@ train_images = train_images.reshape(-1, input_size, input_size, n_channels)
 
 # Optionally normalize keypoints to [0,1] by dividing by image size
 # (Improves training stability)
-train_points_norm = train_points / input_size
+#train_points_norm = train_points / input_size
+pre_mean = train_points.mean(axis = 0)
+pre_std = train_points.std(axis = 0)
+train_points_norm = (train_points - pre_mean) / pre_std
 
 def build_cnn_model(output_dim):
     """
@@ -69,35 +76,37 @@ def build_cnn_model(output_dim):
     model = Sequential()
 
     # ---- CNN BLOCK 1 ----
-    model.add(Conv2D(32, (3, 3), activation='relu',
+    model.add(Conv2D(16, (3, 3), activation='relu',
                      input_shape=(input_size, input_size, n_channels)))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(pool_size=(2, 2)))
 
     # ---- CNN BLOCK 2 ----
-    model.add(Conv2D(64, (3, 3), activation='relu'))
+    model.add(Conv2D(32, (3, 3), activation='relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(pool_size=(2, 2)))
 
     # ---- CNN BLOCK 3 (optional deeper block to improve performance) ----
-    model.add(Conv2D(128, (3, 3), activation='relu'))
+    model.add(Conv2D(64, (3, 3), activation='relu'))
     model.add(BatchNormalization())
     model.add(MaxPooling2D(pool_size=(2, 2)))
 
     # Flatten conv features and use fully connected layers
     model.add(Flatten())
-    model.add(Dense(512, activation='relu'))
-    model.add(Dropout(0.3))  # Dropout helps reduce overfitting
     model.add(Dense(256, activation='relu'))
+    model.add(Dropout(0.3))  # Dropout helps reduce overfitting
+    model.add(Dense(128, activation='relu'))
     model.add(Dropout(0.3))
 
     # Output layer: one neuron per keypoint coordinate
     model.add(Dense(output_dim))
 
     # Compile with MSE loss for regression
-    model.compile(optimizer=Adam(learning_rate=1e-3),
-                  loss='mse',
-                  metrics=['mae'])
+    model.compile(
+        optimizer=Adam(learning_rate=1e-4, clipnorm = 1.0),
+        loss='mse',
+        metrics=['mae']
+        )
     return model
 
 # Helper: split into k folds (reuse your kfold logic but adapted for images & points)
@@ -106,6 +115,7 @@ def kfold_indices(n_samples, k):
     for i in range(n_samples % k):
         fold_sizes[i] += 1
     indices = np.arange(n_samples)
+    np.random.shuffle(indices)
     folds = []
     current = 0
     for size in fold_sizes:
@@ -127,23 +137,35 @@ for fold_idx in range(folds):
     # Training indices are all others
     train_idx = np.concatenate([fold_indices[i] for i in range(folds) if i != fold_idx])
 
-    X_train, y_train = train_images[train_idx], train_points_norm[train_idx]
+    X_train = train_images[train_idx]
+    y_train = train_points_norm[train_idx]
     X_val, y_val = train_images[val_idx], train_points_norm[val_idx]
 
     # Build a fresh CNN for this fold
     model = build_cnn_model(output_dim=train_points_norm.shape[1])
 
     # Early stopping to improve generalization and save time
-    es = EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+    es = EarlyStopping(
+        monitor='val_loss', 
+        patience=5, 
+        restore_best_weights=True
+        )
+    lr_scheduler = ReduceLROnPlateau(
+        monitor = 'val_loss',
+        factor = 0.3,
+        patience = 3,
+        min_lr = 1e-7,
+        verbose = 1
+    )
 
     # ---- TRAIN CNN ----
     model.fit(
         X_train,
         y_train,
         validation_data=(X_val, y_val),
-        epochs=50,        # can increase for better performance
-        batch_size=64,    # hyperparameter to tune
-        callbacks=[es],
+        epochs=150,        # can increase for better performance
+        batch_size=16,    # hyperparameter to tune
+        callbacks=[es, lr_scheduler],
         verbose=1
     )
 
@@ -154,7 +176,7 @@ for fold_idx in range(folds):
 print("\nTraining finished (CNN).")
 
 # Rescale predictions back to original coordinates
-all_preds_rescaled = all_preds * input_size
+all_preds_rescaled = (all_preds * pre_std) + pre_mean
 
 print("CNN Metrics:")
 print("MSE:", mean_squared_error(train_points, all_preds_rescaled))
