@@ -5,36 +5,27 @@ STEPS TO IMPLEMENT & IMPROVE CNN
    - Convert 'Image' strings to arrays.
    - Normalize pixels to [0,1].
    - Reshape to (N, 96, 96, 1).
-   - Normalize keypoints by dividing by 96.
+   - Normalize keypoints by standardizing.
 
 2. Build baseline CNN
    - 2–3 Conv2D + MaxPooling blocks.
-   - Flatten → Dense(512) → Dense(256) → Dense(output_dim).
+   - Flatten → Dense(256) → Dense(128) → Dense(output_dim).
 
 3. Train with validation / k-fold
    - Use EarlyStopping(monitor='val_loss', patience=5).
-   - Batch size ~32–128, epochs ~30–100.
+   - Batch size 16, epochs ~30–150.
 
 4. Improve performance
-   - Add BatchNormalization after conv layers.
-   - Add Dropout(0.3–0.5) in dense layers.
-   - Add more conv filters (e.g. 32 → 64 → 128 → 256).
    - Use data augmentation (random flip, rotation, zoom).
-   - Tune learning rate (1e-3, 5e-4, 1e-4).
-   - Use learning-rate scheduler (ReduceLROnPlateau).
 """
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import random as rand
-import tensorflow as tf
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 # you need Python 3.12 for this. if you want to run this beautiful program & need help installing that, ping me (i'm brian)
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Dropout, BatchNormalization
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
 "EarlyStopping Prevents Overfitting CNNs. Stopping when validation loss stops improving helps maintain performance."
 "No necessary but useful."
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
@@ -115,7 +106,6 @@ def kfold_indices(n_samples, k):
     for i in range(n_samples % k):
         fold_sizes[i] += 1
     indices = np.arange(n_samples)
-    np.random.shuffle(indices)
     folds = []
     current = 0
     for size in fold_sizes:
