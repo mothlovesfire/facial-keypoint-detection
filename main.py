@@ -34,10 +34,18 @@ def standardize(inputArr):
 '''
 #   Helper function to divide an array into k equal parts
 def kfold(inputArr):
-    height = inputArr.shape[0]
+    #height = inputArr.shape[0]
+    height = len(inputArr)
+    fold_size = height // folds
     returnArr = []
     for i in range(folds):
-        returnArr.append(inputArr[(int) (height/folds * i) : (int) (height/folds * (i + 1))])
+        index_start = i * fold_size
+        if (i < folds):
+            index_end = (i + 1) * fold_size
+        else:
+            index_end = height
+        returnArr.append(inputArr[index_start:index_end])
+        #returnArr.append(inputArr[(int) (height/folds * i) : (int) (height/folds * (i + 1))])
     return returnArr
 
 '''
@@ -75,17 +83,17 @@ print("Reformatting data...")
 #print(train_frame.head(1))
 train_points = train_frame.values[:, : -1]
 train_images_str = train_frame.values[:, -1]
-#print(train_points.shape)
-#print(train_image.shape)
-#print(train_image.shape[0])
 train_images = []
 for i in range(train_images_str.shape[0]):
     train_images.append(np.array(train_images_str[i].split(), dtype = float))
 train_images = np.array(train_images)
 train_points = np.array(train_points.astype(float))
+print(f"train_points.shape = {train_points.shape}")
+print(f"train_images.shape = {train_images.shape}")
+#print(train_image.shape[0])
 
 print("Printing images...")
-plotimg(train_images, train_points, (0, 5))
+plotimg(train_images, train_points, (600, 606))
 
 print("Dividing data...")
 train_points_folds = kfold(train_points)
