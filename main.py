@@ -73,6 +73,41 @@ def plotimg(imageArr, keypoints, indexrange):
         increment += 1
     plt.show()
 
+'''
+    plot_predictions()
+        Helper function to plot predicted vs. actual keypoints on selected images.
+'''
+#   Helper function to plot predicted vs. actual keypoints on selected images.
+def plot_predictions(images, true_pts, pred_pts, indices):
+    n = len(indices)
+    fig, axes = plt.subplots(1, n, figsize=(4 * n, 4))
+    if n == 1:
+        axes = [axes]
+
+    # make sure images are shaped (N, 96, 96)
+    imgs = images
+    if imgs.ndim == 2:
+        imgs = imgs.reshape(-1, 96, 96)
+    elif imgs.ndim == 4:
+        imgs = imgs.squeeze(-1)
+
+    for ax, idx in zip(axes, indices):
+        img = imgs[idx]
+        y_true = true_pts[idx]
+        y_pred = pred_pts[idx]
+
+        x_true, y_true_coords = y_true[0::2], y_true[1::2]
+        x_pred, y_pred_coords = y_pred[0::2], y_pred[1::2]
+
+        ax.imshow(img, cmap="gray")
+        ax.scatter(x_true, y_true_coords, s=20, c="lime", label="Actual")
+        ax.scatter(x_pred, y_pred_coords, s=20, c="red", marker="x", label="Predicted")
+        ax.set_title(f"Index {idx}")
+        ax.axis("off")
+
+    axes[0].legend(loc="lower right")
+    plt.tight_layout()
+    plt.show()
 
 #   Loading data
 print("Loading data...")
@@ -141,3 +176,8 @@ print("Metrics:")
 #print(f"train_predictions.shape: {train_predictions.shape}")
 print(f"MSE: {mean_squared_error(train_points, train_predictions)}")
 print(f"MAE: {mean_absolute_error(train_points, train_predictions)}")
+
+#   Visualize predicted vs. actual keypoints for a few sample images
+sample_indices = [0, 1, 2, 3, 4] 
+print(f"Plotting predictions for indices: {sample_indices}")
+plot_predictions(train_images, train_points, train_predictions, sample_indices)
